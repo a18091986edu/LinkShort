@@ -28,6 +28,7 @@ services:
     volumes:
       - ./src:/app/src  # Для разработки (можно закомментировать в production)
       - ./alembic.ini:/app/alembic.ini
+      - ./.env:/app/.env
     depends_on:
       redis:
         condition: service_healthy
