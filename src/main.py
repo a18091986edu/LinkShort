@@ -11,7 +11,10 @@ app.include_router(router=apps_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:3000"],  # TODO: ЗАМЕНИТЬ ПОТОМ НА ДОМЕН
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],  # Добавлены оба варианта
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
