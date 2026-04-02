@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # FastAPI приложение
+  web:
+    build: .
+    container_name: linkshort-web
+    ports:
+      - "8001:8001"  # Пробрасываем порт 8001
+    environment:
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-Links}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_DB=${REDIS_DB:-0}
+      - SECRET_KEY=${SECRET_KEY}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT:-465}
+      - EMAIL_USERNAME=${EMAIL_USERNAME}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - ACCESS_TOKEN_EXPIRE=${ACCESS_TOKEN_EXPIRE:-3600}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - DB_ECHO=${DB_ECHO:-False}
+      - LINK_LENGTH=${LINK_LENGTH:-12}
+    volumes:
+      - ./src:/app/src  # Для разработки (можно закомментировать в production)
+      - ./alembic.ini:/app/alembic.ini
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - linkshort-network
+    command: >
+      sh -c "
+      alembic upgrade head &&
+      uvicorn src.main:app --host 0.0.0.0 --port 8001 --reload
+      "
+    restart: unless-stopped
+
+  # Celery worker для фоновых задач (отправка email)
+  celery:
+    build: .
+    container_name: linkshort-celery
+    environment:
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-Links}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_DB=${REDIS_DB:-0}
+      - SECRET_KEY=${SECRET_KEY}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT:-465}
+      - EMAIL_USERNAME=${EMAIL_USERNAME}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - ACCESS_TOKEN_EXPIRE=${ACCESS_TOKEN_EXPIRE:-3600}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - DB_ECHO=${DB_ECHO:-False}
+    volumes:
+      - ./src:/app/src  # Для разработки (можно закомментировать в production)
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - linkshort-network
+    command: celery -A src.core.celery_app worker --loglevel=info
+    restart: unless-stopped
+
+  # Redis (брокер для Celery и хранения токенов)
+  redis:
+    image: redis:7.2-alpine
+    container_name: linkshort-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - linkshort-network
+    restart: unless-stopped
+
+networks:
+  linkshort-network:
+    driver: bridge
+
+volumes:
+  redis-data:
