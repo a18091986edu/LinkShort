@@ -29,10 +29,6 @@ COPY --from=builder /app/.venv /app/.venv
 COPY src/ ./src/
 COPY alembic.ini ./
 
-# Копируем скрипт для ожидания сервисов (опционально)
-COPY scripts/ ./scripts/
-RUN chmod +x ./scripts/*.sh 2>/dev/null || true
-
 # Устанавливаем переменные окружения
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONPATH="/app/src" \
