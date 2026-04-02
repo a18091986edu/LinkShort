@@ -1,4 +1,9 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import (
+    create_async_engine,
+    async_sessionmaker,
+    AsyncSession,
+    AsyncEngine,
+)
 from core.settings import settings
 
 
@@ -25,3 +30,11 @@ class DBDependency:
     @property
     def db_session(self) -> async_sessionmaker[AsyncSession]:
         return self._session_factory
+
+    @property
+    def db_engine(self) -> AsyncEngine:
+        return self._engine
+
+
+def get_db_engine() -> AsyncEngine:
+    return DBDependency().db_engine

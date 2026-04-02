@@ -35,3 +35,7 @@ class GetUserWithIDAndEmail(GetUserByID, CreateUser):
 
 class UserVerifySchema(GetUserByID, GetUserByEmail):
     session_id: uuid.UUID | str | None = None
+
+
+class GetUserForAdmin(GetUserWithIDAndEmail):
+    is_superuser: bool
